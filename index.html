@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Store — Organizador Inteligente de Assets FiveM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-pink: #ff2d9b;
+            --neon-pink-light: #ff5fbf;
+            --neon-magenta: #d946ef;
+            --neon-purple: #a855f7;
+            --neon-violet: #7c3aed;
+            --dark-bg: #0a0a0f;
+            --dark-card: #111118;
+            --dark-surface: #16161f;
+            --dark-elevated: #1c1c28;
+            --glass-bg: rgba(17, 17, 24, 0.75);
+            --glass-border: rgba(255, 45, 155, 0.1);
+            --text-white: #f5f5f7;
+            --text-gray: #9ca3af;
+            --text-muted: #5b6170;
+            --gradient-brand: linear-gradient(135deg, #ff2d9b, #d946ef, #7c3aed);
+            --shadow-neon: 0 0 20px rgba(255, 45, 155, 0.25), 0 0 60px rgba(255, 45, 155, 0.08);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--neon-pink) var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--neon-pink); border-radius: 3px; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-white);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ===== BACKGROUND ===== */
+        .bg-effects {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-effects::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                radial-gradient(ellipse 35% 25% at 15% 15%, rgba(255, 45, 155, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse 30% 20% at 85% 25%, rgba(124, 58, 237, 0.04) 0%, transparent 50%),
+                radial-gradient(ellipse 25% 25% at 50% 85%, rgba(217, 70, 239, 0.03) 0%, transparent 50%);
+            animation: drift 25s ease-in-out infinite;
+        }
+
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(1%, -1%); }
+        }
+
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 45, 155, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 45, 155, 0.015) 1px, transparent 1px);
+            background-size: 80px 80px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page { position: relative; z-index: 1; }
+
+        /* ===== NAV ===== */
+        .nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 14px 0;
+            background: rgba(10, 10, 15, 0.88);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(255, 45, 155, 0.06);
+        }
+
+        .nav-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 0 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .nav-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        .nav-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1em;
+            font-weight: 700;
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 1.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 28px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-gray);
+            text-decoration: none;
+            font-size: 0.84em;
+            font-weight: 500;
+            transition: color 0.3s;
+            letter-spacing: 0.2px;
+        }
+
+        .nav-links a:hover { color: var(--neon-pink-light); }
+
+        .nav-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.72em;
+            color: var(--text-muted);
+            padding: 6px 14px;
+            background: rgba(255, 45, 155, 0.05);
+            border: 1px solid rgba(255, 45, 155, 0.1);
+            border-radius: 100px;
+        }
+
+        .nav-status .pulse {
+            width: 6px;
+            height: 6px;
+            background: #00e676;
+            border-radius: 50%;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 4px #00e676; }
+            50% { opacity: 0.4; box-shadow: none; }
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 100px 32px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            align-items: center;
+        }
+
+        .hero-content { position: relative; z-index: 2; }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px;
+            background: rgba(255, 45, 155, 0.06);
+            border: 1px solid rgba(255, 45, 155, 0.15);
+            border-radius: 100px;
+            font-size: 0.7em;
+            font-weight: 600;
+            color: var(--neon-pink-light);
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hero-tag .dot {
+            width: 5px;
+            height: 5px;
+            background: var(--neon-pink);
+            border-radius: 50%;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(2em, 4.2vw, 3.4em);
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .hero h1 .glow {
+            display: block;
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 0 18px rgba(255, 45, 155, 0.3));
+        }
+
+        .hero-desc {
+            font-size: 1.05em;
+            color: var(--text-gray);
+            max-width: 460px;
+            line-height: 1.75;
+            margin-bottom: 32px;
+        }
+
+        .hero-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hero-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 8px;
+            font-size: 0.78em;
+            color: var(--text-gray);
+            transition: all 0.3s ease;
+        }
+
+        .hero-chip:hover {
+            border-color: rgba(255, 45, 155, 0.2);
+            background: rgba(255, 45, 155, 0.04);
+        }
+
+        .hero-chip .chip-icon {
+            font-size: 1.1em;
+        }
+
+        /* Hero Visual */
+        .hero-visual {
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .hero-img-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .hero-img-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, rgba(255, 45, 155, 0.12) 0%, rgba(124, 58, 237, 0.06) 40%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(50px);
+            animation: glowPulse 5s ease-in-out infinite;
+        }
+
+        @keyframes glowPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.7; }
+            50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+        }
+
+        .hero-img {
+            position: relative;
+            width: 100%;
+            height: auto;
+            border-radius: 16px;
+            z-index: 2;
+        }
+
+        /* Floating panels */
+        .fp {
+            position: absolute;
+            background: var(--glass-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 45, 155, 0.12);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 0.72em;
+            z-index: 3;
+            box-shadow: var(--shadow-card);
+            animation: floatY 7s ease-in-out infinite;
+        }
+
+        .fp:nth-child(3) { animation-delay: -2.3s; }
+        .fp:nth-child(4) { animation-delay: -4.6s; }
+
+        @keyframes floatY {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .fp.tl { top: 8%; left: -4%; }
+        .fp.tr { top: 4%; right: -2%; }
+        .fp.br { bottom: 12%; right: -6%; }
+
+        .fp-label {
+            font-size: 0.72em;
+            color: var(--neon-pink);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 2px;
+        }
+
+        .fp-value {
+            font-weight: 700;
+            color: var(--text-white);
+            font-size: 1.2em;
+        }
+
+        /* ===== SECTION GENERAL ===== */
+        .section {
+            padding: 110px 32px;
+        }
+
+        .section-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .section-head {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .section-tag {
+            display: inline-block;
+            font-size: 0.68em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--neon-pink);
+            margin-bottom: 14px;
+            padding: 5px 14px;
+            background: rgba(255, 45, 155, 0.05);
+            border: 1px solid rgba(255, 45, 155, 0.1);
+            border-radius: 4px;
+        }
+
+        .section-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1.6em, 3.2vw, 2.4em);
+            font-weight: 900;
+            letter-spacing: -0.3px;
+            margin-bottom: 14px;
+            text-transform: uppercase;
+        }
+
+        .section-sub {
+            font-size: 1em;
+            color: var(--text-gray);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        /* ===== SHOWCASE IMAGE ROW ===== */
+        .showcase {
+            padding: 0 32px 80px;
+        }
+
+        .showcase-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .showcase-img-wrap {
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 45, 155, 0.1);
+            box-shadow: var(--shadow-neon), var(--shadow-card);
+            position: relative;
+        }
+
+        .showcase-img-wrap img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .showcase-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, var(--dark-bg) 0%, transparent 30%);
+            pointer-events: none;
+        }
+
+        /* ===== MODULES ===== */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+        }
+
+        .mod-card {
+            background: var(--dark-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .mod-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--gradient-brand);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .mod-card:hover {
+            border-color: rgba(255, 45, 155, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 16px 48px rgba(255, 45, 155, 0.06);
+        }
+
+        .mod-card:hover::after { transform: scaleX(1); }
+
+        .mod-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3em;
+            margin-bottom: 18px;
+        }
+
+        .mod-icon.i1 { background: rgba(0, 200, 255, 0.07); border: 1px solid rgba(0, 200, 255, 0.15); }
+        .mod-icon.i2 { background: rgba(168, 85, 247, 0.07); border: 1px solid rgba(168, 85, 247, 0.15); }
+        .mod-icon.i3 { background: rgba(255, 107, 53, 0.07); border: 1px solid rgba(255, 107, 53, 0.15); }
+        .mod-icon.i4 { background: rgba(0, 230, 118, 0.07); border: 1px solid rgba(0, 230, 118, 0.15); }
+        .mod-icon.i5 { background: rgba(255, 45, 155, 0.07); border: 1px solid rgba(255, 45, 155, 0.15); }
+
+        .mod-card h3 {
+            font-size: 1.05em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .mod-card p {
+            font-size: 0.86em;
+            color: var(--text-gray);
+            line-height: 1.7;
+        }
+
+        .mod-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 14px;
+        }
+
+        .mod-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.62em;
+            padding: 2px 7px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            color: var(--text-muted);
+        }
+
+        /* ===== FEATURES ===== */
+        .feat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 56px;
+            align-items: center;
+        }
+
+        .feat-grid.reverse { direction: rtl; }
+        .feat-grid.reverse > * { direction: ltr; }
+
+        .feat-text h3 {
+            font-size: 1.45em;
+            font-weight: 800;
+            margin-bottom: 14px;
+            line-height: 1.25;
+        }
+
+        .feat-text p {
+            color: var(--text-gray);
+            font-size: 0.92em;
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .feat-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .feat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.86em;
+            color: var(--text-gray);
+        }
+
+        .feat-item-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            background: rgba(255, 45, 155, 0.06);
+            border: 1px solid rgba(255, 45, 155, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7em;
+            flex-shrink: 0;
+        }
+
+        .feat-visual {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-card);
+        }
+
+        .feat-visual img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* ===== WORKFLOW ===== */
+        .workflow-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            position: relative;
+        }
+
+        .workflow-row::before {
+            content: '';
+            position: absolute;
+            top: 40px;
+            left: 12%;
+            width: 76%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 45, 155, 0.15), rgba(124, 58, 237, 0.15), transparent);
+        }
+
+        .wf-step {
+            text-align: center;
+        }
+
+        .wf-num {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 45, 155, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1em;
+            font-weight: 900;
+            color: var(--neon-pink);
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .wf-step:hover .wf-num {
+            background: rgba(255, 45, 155, 0.08);
+            border-color: rgba(255, 45, 155, 0.35);
+            box-shadow: 0 0 16px rgba(255, 45, 155, 0.12);
+        }
+
+        .wf-step h4 {
+            font-size: 0.9em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .wf-step p {
+            font-size: 0.78em;
+            color: var(--text-gray);
+            line-height: 1.5;
+        }
+
+        /* ===== HIGHLIGHT QUOTE ===== */
+        .highlight-block {
+            background: linear-gradient(135deg, rgba(255, 45, 155, 0.03), rgba(124, 58, 237, 0.015));
+            border: 1px solid rgba(255, 45, 155, 0.07);
+            border-radius: 24px;
+            padding: 64px 48px;
+            text-align: center;
+            margin: 0 auto;
+            max-width: 900px;
+        }
+
+        .highlight-block .quote {
+            font-size: clamp(1.3em, 2.5vw, 2em);
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 20px;
+        }
+
+        .highlight-block .quote .pink {
+            color: var(--neon-pink-light);
+        }
+
+        .highlight-block .quote-sub {
+            color: var(--text-gray);
+            font-size: 0.95em;
+        }
+
+        /* ===== APP MOCKUP SECTION ===== */
+        .mockup-section {
+            padding: 80px 32px;
+        }
+
+        .mockup-wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            background: var(--dark-card);
+            border: 1px solid rgba(255, 45, 155, 0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-neon), 0 24px 80px rgba(0, 0, 0, 0.5);
+        }
+
+        .mockup-bar {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 12px 16px;
+            background: var(--dark-elevated);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .mockup-dot.r { background: #ff5f57; }
+        .mockup-dot.y { background: #ffbd2e; }
+        .mockup-dot.g { background: #28c840; }
+
+        .mockup-bar-title {
+            margin-left: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7em;
+            color: var(--text-muted);
+        }
+
+        .mockup-body {
+            padding: 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .mockup-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .m-tab {
+            padding: 7px 12px;
+            background: rgba(255, 45, 155, 0.04);
+            border: 1px solid rgba(255, 45, 155, 0.08);
+            border-radius: 7px;
+            font-size: 0.7em;
+            color: var(--text-gray);
+            font-weight: 500;
+            cursor: default;
+            transition: all 0.3s ease;
+        }
+
+        .m-tab.active {
+            background: rgba(255, 45, 155, 0.12);
+            border-color: rgba(255, 45, 155, 0.35);
+            color: var(--neon-pink-light);
+        }
+
+        .mockup-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .m-field {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .m-field-lbl {
+            font-size: 0.6em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .m-field-val {
+            font-size: 0.78em;
+            color: var(--text-gray);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .m-btn {
+            grid-column: 1 / -1;
+            padding: 12px;
+            background: var(--gradient-brand);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.78em;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== GALLERY ===== */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .gallery-item {
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .gallery-item:hover {
+            border-color: rgba(255, 45, 155, 0.25);
+            transform: scale(1.02);
+            box-shadow: var(--shadow-neon);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .gallery-item .g-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(to top, rgba(10, 10, 15, 0.95), transparent);
+            font-size: 0.76em;
+            font-weight: 600;
+            color: var(--text-white);
+        }
+
+        /* ===== CONTACT / INFO ===== */
+        .info-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
+
+        .info-card {
+            background: var(--dark-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 28px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            border-color: rgba(255, 45, 155, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .info-card-icon {
+            font-size: 1.6em;
+            margin-bottom: 12px;
+        }
+
+        .info-card h4 {
+            font-size: 0.92em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .info-card p {
+            font-size: 0.8em;
+            color: var(--text-gray);
+            line-height: 1.5;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            text-align: center;
+            padding: 48px 32px 32px;
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .footer-brand {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.3em;
+            font-weight: 900;
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .footer-sub {
+            font-size: 0.82em;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75em;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover { color: var(--neon-pink); }
+
+        .footer-copy {
+            margin-top: 24px;
+            font-size: 0.7em;
+            color: #333;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .hero-inner { grid-template-columns: 1fr; text-align: center; }
+            .hero-desc { margin: 0 auto 32px; }
+            .hero-features { justify-content: center; }
+            .hero-visual { order: -1; }
+            .hero-img-wrap { max-width: 380px; margin: 0 auto; }
+            .feat-grid, .feat-grid.reverse { grid-template-columns: 1fr; direction: ltr; }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .modules-grid { grid-template-columns: 1fr; }
+            .workflow-row { grid-template-columns: 1fr 1fr; }
+            .workflow-row::before { display: none; }
+            .gallery-grid { grid-template-columns: 1fr; }
+            .info-row { grid-template-columns: 1fr; }
+            .mockup-fields { grid-template-columns: 1fr; }
+            .fp { display: none; }
+            .highlight-block { padding: 40px 24px; }
+        }
+
+        @media (max-width: 480px) {
+            .workflow-row { grid-template-columns: 1fr; }
+            .stats-inner { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* ===== SEPARATOR ===== */
+        .sep {
+            height: 1px;
+            max-width: 1180px;
+            margin: 0 auto;
+            background: linear-gradient(90deg, transparent, rgba(255, 45, 155, 0.1), transparent);
+        }
+
+        /* ===== STATS BAR ===== */
+        .stats {
+            padding: 44px 32px;
+            border-top: 1px solid rgba(255, 45, 155, 0.04);
+            border-bottom: 1px solid rgba(255, 45, 155, 0.04);
+            background: rgba(17, 17, 24, 0.4);
+        }
+
+        .stats-inner {
+            max-width: 1180px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .stat-block { text-align: center; }
+
+        .stat-val {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2em;
+            font-weight: 900;
+            background: var(--gradient-brand);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-lbl {
+            font-size: 0.72em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-effects"></div>
+<div class="grid-bg"></div>
+
+<div class="page">
+
+<!-- ===== NAV ===== -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="#" class="nav-brand">
+            <img src="imagens/icon.ico" alt="SecretStore" class="nav-logo">
+            <span class="nav-name">SECRET STORE - ORGANIZER</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#sobre">Sobre</a></li>
+            <li><a href="#modulos">Módulos</a></li>
+            <li><a href="#recursos">Recursos</a></li>
+            <li><a href="#interface">Interface</a></li>
+            <li><a href="#contato">Contato</a></li>
+        </ul>
+        <div class="nav-status">
+            <span class="pulse"></span>
+            Sistema Ativo
+        </div>
+    </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-content">
+            <div class="hero-tag">
+                <span class="dot"></span>
+                Exclusivo para FiveM
+            </div>
+            <h1>
+                Organize seus<br>
+                <span class="glow">Assets em Segundos</span>
+            </h1>
+            <p class="hero-desc">
+                O Secret Store - Organizer escaneia, classifica e organiza automaticamente todos os seus resources FiveM com inteligência artificial local. Mapas, veículos, roupas, peds e armas — tudo estruturado perfeitamente.
+            </p>
+            <div class="hero-features">
+                <span class="hero-chip"><span class="chip-icon">🗺️</span> Mapas</span>
+                <span class="hero-chip"><span class="chip-icon">🏎️</span> Veículos</span>
+                <span class="hero-chip"><span class="chip-icon">👔</span> Roupas</span>
+                <span class="hero-chip"><span class="chip-icon">🧑</span> Peds</span>
+                <span class="hero-chip"><span class="chip-icon">⚔️</span> Armas</span>
+                <span class="hero-chip"><span class="chip-icon">🔒</span> Seguro</span>
+                <span class="hero-chip"><span class="chip-icon">📴</span> Offline</span>
+            </div>
+        </div>
+
+        <div class="hero-visual">
+            <div class="hero-img-wrap">
+                <div class="hero-img-glow"></div>
+                <img src="imagens/background.png" alt="SecretStore" class="hero-img">
+                <div class="fp tl">
+                    <div class="fp-label">Módulos</div>
+                    <div class="fp-value">5 Ativos</div>
+                </div>
+                <div class="fp tr">
+                    <div class="fp-label">Scan</div>
+                    <div class="fp-value">Recursivo</div>
+                </div>
+                <div class="fp br">
+                    <div class="fp-label">Modo</div>
+                    <div class="fp-value">Online + Offline</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== STATS ===== -->
+<div class="stats">
+    <div class="stats-inner">
+        <div class="stat-block">
+            <div class="stat-val">5</div>
+            <div class="stat-lbl">Módulos</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-val">100%</div>
+            <div class="stat-lbl">Funcional Offline</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-val">∞</div>
+            <div class="stat-lbl">Arquivos por Scan</div>
+        </div>
+        <div class="stat-block">
+            <div class="stat-val">0</div>
+            <div class="stat-lbl">Configuração Manual</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SOBRE ===== -->
+<section class="section" id="sobre">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Sobre o Sistema</span>
+            <h2 class="section-title">O Que É o Secret Store - Organizer</h2>
+            <p class="section-sub">Uma aplicação desktop profissional que resolve o maior problema de todo administrador FiveM: a organização de assets.</p>
+        </div>
+
+        <div class="feat-grid">
+            <div class="feat-text">
+                <h3>Inteligência artificial local para classificação de resources</h3>
+                <p>O Secret Store - Organizer utiliza algoritmos de reconhecimento de padrões para identificar automaticamente cada tipo de arquivo em suas pastas de resources — analisando extensões, estruturas de pasta e padrões de nomenclatura exclusivos do ecossistema FiveM.</p>
+                <p>Em vez de gastar horas abrindo pasta por pasta, você seleciona a origem, clica em escanear, e recebe um relatório completo com toda a classificação pronta. Depois, com um clique, tudo é reorganizado em uma estrutura limpa e profissional.</p>
+                <div class="feat-list">
+                    <div class="feat-item">
+                        <div class="feat-item-dot">⚡</div>
+                        <span>Escaneamento recursivo ilimitado em profundidade</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">🧠</div>
+                        <span>Classificação automática por tipo e categoria</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">🛡️</div>
+                        <span>Modo não-destrutivo preserva seus originais</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">🔄</div>
+                        <span>Funciona online e offline sem interrupção</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feat-visual">
+                <img src="imagens/app-interface.png" alt="Interface SecretStore">
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== MÓDULOS ===== -->
+<section class="section" id="modulos">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Módulos</span>
+            <h2 class="section-title">5 Módulos Especializados</h2>
+            <p class="section-sub">Cada módulo possui algoritmos treinados para reconhecer padrões exclusivos de cada tipo de asset FiveM.</p>
+        </div>
+
+        <div class="modules-grid">
+            <div class="mod-card">
+                <div class="mod-icon i1">🗺️</div>
+                <h3>Mapas & Ambientes</h3>
+                <p>Identifica YMAP, YTYP, YDR, YDD, YBN e texturas associadas. Classifica interiores, exteriores, props e cenários. Reconstrói hierarquias de dependências para deploy sem erros.</p>
+                <div class="mod-tags">
+                    <span class="mod-tag">.ymap</span>
+                    <span class="mod-tag">.ytyp</span>
+                    <span class="mod-tag">.ydr</span>
+                    <span class="mod-tag">.ydd</span>
+                    <span class="mod-tag">.ybn</span>
+                </div>
+            </div>
+
+            <div class="mod-card">
+                <div class="mod-icon i2">🏎️</div>
+                <h3>Veículos</h3>
+                <p>Detecta e classifica por categoria: carros, motos, barcos, aviões, helicópteros. Analisa arquivos de meta, streams e texturas para garantir integridade de cada veículo.</p>
+                <div class="mod-tags">
+                    <span class="mod-tag">vehicles.meta</span>
+                    <span class="mod-tag">handling.meta</span>
+                    <span class="mod-tag">.yft</span>
+                </div>
+            </div>
+
+            <div class="mod-card">
+                <div class="mod-icon i3">👔</div>
+                <h3>Roupas & Acessórios</h3>
+                <p>Identifica componentes de vestuário por gênero e slot de equipamento. Organiza em estrutura compatível com os principais sistemas de clothing do ecossistema FiveM.</p>
+                <div class="mod-tags">
+                    <span class="mod-tag">mp_m_freemode</span>
+                    <span class="mod-tag">mp_f_freemode</span>
+                    <span class="mod-tag">.ydd</span>
+                </div>
+            </div>
+
+            <div class="mod-card">
+                <div class="mod-icon i4">🧑</div>
+                <h3>Pedestres (Peds)</h3>
+                <p>Escaneia modelos de NPCs customizados. Identifica YMT, YDD, YTD e componentes de aparência. Prepara a estrutura completa para implementação direta no servidor.</p>
+                <div class="mod-tags">
+                    <span class="mod-tag">.ymt</span>
+                    <span class="mod-tag">peds.meta</span>
+                    <span class="mod-tag">.ytd</span>
+                </div>
+            </div>
+
+            <div class="mod-card">
+                <div class="mod-icon i5">⚔️</div>
+                <h3>Armas</h3>
+                <p>Classifica por tipo: pistolas, rifles, SMGs, shotguns, melee e explosivos. Verifica integridade completa de cada weapon pack antes do deploy.</p>
+                <div class="mod-tags">
+                    <span class="mod-tag">weapons.meta</span>
+                    <span class="mod-tag">weaponcomponents.meta</span>
+                    <span class="mod-tag">.ydr</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== RECURSOS ===== -->
+<section class="section" id="recursos">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Recursos</span>
+            <h2 class="section-title">Poder Sob o Capô</h2>
+            <p class="section-sub">Funcionalidades projetadas para maximizar produtividade e eliminar trabalho manual repetitivo.</p>
+        </div>
+
+        <!-- Feature: Antes/Depois -->
+        <div class="feat-grid" style="margin-bottom: 80px;">
+            <div class="feat-text">
+                <h3>De caos absoluto a organização perfeita</h3>
+                <p>Não importa o quão desorganizados seus assets estejam. O Secret Store - Organizer lê recursivamente cada subpasta, identifica cada arquivo e reorganiza tudo em uma estrutura profissional e padronizada.</p>
+                <p>Escolha entre copiar (mantendo originais intactos) ou mover (otimizando espaço). O modo merge detecta e unifica duplicatas automaticamente.</p>
+                <div class="feat-list">
+                    <div class="feat-item">
+                        <div class="feat-item-dot">📋</div>
+                        <span>Modo Copiar — zero risco, originais preservados</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">📦</div>
+                        <span>Modo Mover — otimização de espaço em disco</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">🔄</div>
+                        <span>Merge — unificação automática de duplicatas</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feat-visual">
+                <img src="imagens/antes-depois.png" alt="Antes e Depois">
+            </div>
+        </div>
+
+        <!-- Feature: Segurança -->
+        <div class="feat-grid reverse">
+            <div class="feat-text">
+                <h3>Segurança enterprise, experiência fluida</h3>
+                <p>Autenticação JWT com criptografia bcrypt, identificação única por dispositivo e verificação automática de sessão. Seus dados e acesso protegidos em todas as camadas.</p>
+                <p>Quando detecta ausência de internet, ativa automaticamente o modo offline com cache local criptografado. Todas as funcionalidades permanecem operacionais. Na reconexão, sincroniza silenciosamente.</p>
+                <div class="feat-list">
+                    <div class="feat-item">
+                        <div class="feat-item-dot">🔑</div>
+                        <span>JWT + bcrypt — tokens assinados com hash seguro</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">💻</div>
+                        <span>Device ID — controle granular por dispositivo</span>
+                    </div>
+                    <div class="feat-item">
+                        <div class="feat-item-dot">📴</div>
+                        <span>Offline first — nunca interrompe seu trabalho</span>
+                    </div>
+                </div>
+            </div>
+            <div class="feat-visual">
+                <img src="imagens/seguranca.png" alt="Segurança">
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== WORKFLOW ===== -->
+<section class="section">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Workflow</span>
+            <h2 class="section-title">4 Passos. Zero Complexidade.</h2>
+            <p class="section-sub">Do caos absoluto à organização perfeita em menos de um minuto.</p>
+        </div>
+
+        <div class="workflow-row">
+            <div class="wf-step">
+                <div class="wf-num">01</div>
+                <h4>Selecione</h4>
+                <p>Aponte para a pasta com seus assets desorganizados</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-num">02</div>
+                <h4>Escaneie</h4>
+                <p>O algoritmo analisa tudo recursivamente em segundos</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-num">03</div>
+                <h4>Revise</h4>
+                <p>Veja a classificação completa antes de qualquer ação</p>
+            </div>
+            <div class="wf-step">
+                <div class="wf-num">04</div>
+                <h4>Organize</h4>
+                <p>Execute e receba a estrutura perfeita instantaneamente</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== INTERFACE MOCKUP ===== -->
+<section class="section" id="interface">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Interface</span>
+            <h2 class="section-title">Design Profissional Dark Mode</h2>
+            <p class="section-sub">Interface moderna com janela customizada, navegação intuitiva entre módulos e feedback visual em tempo real.</p>
+        </div>
+
+        <div class="mockup-wrap">
+            <div class="mockup-bar">
+                <span class="mockup-dot r"></span>
+                <span class="mockup-dot y"></span>
+                <span class="mockup-dot g"></span>
+                <span class="mockup-bar-title">Secret Store - Organizer v1.0 — Módulo: Mapas</span>
+            </div>
+            <div class="mockup-body">
+                <div class="mockup-tabs">
+                    <span class="m-tab active">🗺️ Mapas</span>
+                    <span class="m-tab">🏎️ Veículos</span>
+                    <span class="m-tab">👔 Roupas</span>
+                    <span class="m-tab">🧑 Peds</span>
+                    <span class="m-tab">⚔️ Armas</span>
+                </div>
+                <div class="mockup-fields">
+                    <div class="m-field">
+                        <div class="m-field-lbl">Pasta de Origem</div>
+                        <div class="m-field-val">C:\Downloads\mapas_fivem</div>
+                    </div>
+                    <div class="m-field">
+                        <div class="m-field-lbl">Pasta de Destino</div>
+                        <div class="m-field-val">C:\Server\resources\[maps]</div>
+                    </div>
+                    <div class="m-field">
+                        <div class="m-field-lbl">Modo de Operação</div>
+                        <div class="m-field-val">● Copiar (não-destrutivo)</div>
+                    </div>
+                    <div class="m-field">
+                        <div class="m-field-lbl">Opções Extras</div>
+                        <div class="m-field-val">✓ Recursivo &nbsp; ✓ Merge</div>
+                    </div>
+                    <div class="m-btn">▶ ESCANEAR E ORGANIZAR</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== GALERIA ===== -->
+<section class="section">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Showcase</span>
+            <h2 class="section-title">Secret Store - Organizer em Ação</h2>
+            <p class="section-sub">Veja o sistema em diferentes cenários de uso e funcionalidades.</p>
+        </div>
+
+        <div class="gallery-grid">
+            <div class="gallery-item">
+                <img src="imagens/hero-banner.png" alt="SecretStore Hero">
+                <div class="g-label">Visão Geral do Sistema</div>
+            </div>
+            <div class="gallery-item">
+                <img src="imagens/mascote.png" alt="Mascote SecretStore">
+                <div class="g-label">Identidade Visual</div>
+            </div>
+            <div class="gallery-item">
+                <img src="imagens/social-post.png" alt="SecretStore Social">
+                <div class="g-label">Organização Inteligente</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== HIGHLIGHT ===== -->
+<section class="section">
+    <div class="section-inner">
+        <div class="highlight-block">
+            <p class="quote">
+                "O que antes levava <span class="pink">horas de trabalho manual</span> agora é resolvido em <span class="pink">segundos</span>. Estrutura perfeita, zero erros, controle total."
+            </p>
+            <p class="quote-sub">Automação que transforma a produtividade de administradores FiveM.</p>
+        </div>
+    </div>
+</section>
+
+<div class="sep"></div>
+
+<!-- ===== PARA QUEM É ===== -->
+<section class="section" id="contato">
+    <div class="section-inner">
+        <div class="section-head">
+            <span class="section-tag">Público</span>
+            <h2 class="section-title">Feito Para Quem Leva FiveM a Sério</h2>
+        </div>
+
+        <div class="info-row">
+            <div class="info-card">
+                <div class="info-card-icon">👑</div>
+                <h4>Administradores</h4>
+                <p>Gerencie centenas de resources com eficiência. Mantenha seu servidor organizado, estável e fácil de escalar.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-card-icon">💻</div>
+                <h4>Desenvolvedores</h4>
+                <p>Receba assets de múltiplas fontes e classifique-os automaticamente. Foque no código, não na organização.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-card-icon">🎨</div>
+                <h4>Criadores de Conteúdo</h4>
+                <p>Trabalhe com grandes volumes de assets customizados e encontre qualquer arquivo em segundos.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+    <div class="footer-brand">SECRET STORE</div>
+    <p class="footer-sub">Automação Inteligente de Assets para FiveM</p>
+    <ul class="footer-links">
+        <li><a href="#sobre">Sobre</a></li>
+        <li><a href="#modulos">Módulos</a></li>
+        <li><a href="#recursos">Recursos</a></li>
+        <li><a href="#interface">Interface</a></li>
+    </ul>
+    <p class="footer-copy">© 2025 Secret Store — Todos os direitos reservados</p>
+</footer>
+
+</div><!-- .page -->
+
+</body>
+</html>
